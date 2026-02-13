@@ -9,6 +9,7 @@ interface ScanResultProps {
   erpSku?: string;
   scannedAt?: string;
   errorMessage?: string;
+  rawData?: any;
   onScanNext: () => void;
 }
 
@@ -40,10 +41,9 @@ const config: Record<ScanStatus, { bg: string; icon: React.ReactNode; title: str
   },
 };
 
-const ScanResult = ({ status, name, erpSku, scannedAt, errorMessage, onScanNext }: ScanResultProps) => {
+const ScanResult = ({ status, name, erpSku, scannedAt, errorMessage, rawData, onScanNext }: ScanResultProps) => {
   const { bg, icon, title } = config[status];
 
-  // Parse erp_sku as comma-separated services
   const services = erpSku ? erpSku.split(',').map((s) => s.trim()).filter(Boolean) : [];
 
   return (
@@ -58,7 +58,7 @@ const ScanResult = ({ status, name, erpSku, scannedAt, errorMessage, onScanNext 
 
         {services.length > 0 && (
           <div className="text-center space-y-1">
-            <p className="text-sm font-semibold uppercase tracking-wide opacity-80">Services</p>
+            <p className="text-sm font-semibold uppercase tracking-wide opacity-80">Purchased Services</p>
             <ul className="space-y-1">
               {services.map((service, i) => (
                 <li key={i} className="text-lg">{service}</li>
@@ -90,6 +90,16 @@ const ScanResult = ({ status, name, erpSku, scannedAt, errorMessage, onScanNext 
         >
           Scan Next
         </Button>
+
+        {/* Debug: Raw JSON from database */}
+        {rawData && (
+          <div className="mt-4 w-full">
+            <p className="text-xs font-mono opacity-60 mb-1">Debug — Raw JSON:</p>
+            <pre className="text-xs font-mono bg-black/30 rounded p-3 overflow-auto max-h-40 whitespace-pre-wrap break-all">
+              {JSON.stringify(rawData, null, 2)}
+            </pre>
+          </div>
+        )}
       </div>
     </div>
   );
