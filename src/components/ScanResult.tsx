@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { CheckCircle, XCircle, AlertTriangle, User, Ticket, Calendar, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, User, Ticket, Clock } from 'lucide-react';
 import { externalSupabase } from '@/integrations/supabase/externalClient';
 
 export type ScanStatus = 'found_paid' | 'found_unpaid' | 'already_scanned' | 'not_found' | 'error';
@@ -21,16 +21,6 @@ const getDisplayName = (attendee: any): string => {
   return attendee?.name || 'Nepoznato';
 };
 
-const getEventName = (eventId: string | undefined): string => {
-  if (!eventId) return '';
-  const eventMap: Record<string, string> = {
-    'annual_conf': 'Godišnja Konferencija',
-    'workshop': 'Radionica',
-    'summit': 'Summit',
-  };
-  return eventMap[eventId] || eventId;
-};
-
 const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }: ScanResultProps) => {
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
@@ -38,12 +28,10 @@ const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }:
 
   const displayName = getDisplayName(attendee);
   const email = attendee?.email || '';
-  const eventId = attendee?.event_id || '';
-  const eventName = getEventName(eventId);
-  const services = attendee?.erp_sku
-    ? attendee.erp_sku.split(',').map((s: string) => s.trim()).filter(Boolean)
-    : [];
-  const isPaid = status === 'found_paid' || status === 'already_scanned';
+  const eventTitle = attendee?.eventTitle || '';
+  const services: string[] = attendee?.serviceNames || [];
+  const orderStatus = attendee?.orderStatus || '';
+  const isPaid = ['paid', 'approved', 'completed'].includes(orderStatus?.toLowerCase()) || status === 'already_scanned';
 
   const handleConfirm = async () => {
     if (!externalSupabase || !attendee?.id) return;
@@ -91,8 +79,8 @@ const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }:
 
   // --- Status Header ---
   const headerConfig = {
-    found_paid: { bg: 'bg-emerald-500', icon: CheckCircle, label: 'PRISTUP ODOBREN' },
-    found_unpaid: { bg: 'bg-destructive', icon: XCircle, label: 'PLAĆANJE NIJE POTVRĐENO' },
+    found_paid: { bg: 'bg-emerald-500', icon: CheckCircle, label: 'PLAĆENO' },
+    found_unpaid: { bg: 'bg-destructive', icon: XCircle, label: 'NA ČEKANJU' },
     already_scanned: { bg: 'bg-amber-500', icon: AlertTriangle, label: 'VEĆ SKENIRANO' },
   } as const;
 
@@ -103,10 +91,11 @@ const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }:
     <div className="min-h-screen bg-background flex flex-col p-5">
       <div className="max-w-sm w-full mx-auto space-y-4 flex-1 flex flex-col">
 
-        {/* Status Header */}
+        {/* Status Header with Event Title */}
         <div className={`rounded-2xl ${header.bg} p-6 text-center space-y-2`}>
           <HeaderIcon className="h-14 w-14 text-white mx-auto" />
           <h1 className="text-2xl font-black text-white tracking-wide">{header.label}</h1>
+          {eventTitle && <p className="text-white/80 text-sm font-medium">{eventTitle}</p>}
         </div>
 
         {/* Attendee Identity */}
@@ -138,19 +127,6 @@ const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }:
                   })}
                 </p>
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Event Info */}
-        {eventId && (
-          <Card>
-            <CardContent className="py-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Događaj</p>
-              </div>
-              <p className="text-sm font-medium text-foreground">{eventName}</p>
             </CardContent>
           </Card>
         )}
