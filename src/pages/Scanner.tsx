@@ -172,6 +172,13 @@ const Scanner = () => {
       </div>
       <QrScanner key={scannerKey} onScan={handleScan} active={scanning} />
 
+      {/* Debug: Supabase URL */}
+      <div className="fixed bottom-20 left-0 right-0 px-4">
+        <p className="text-[10px] text-muted-foreground text-center break-all">
+          Supabase URL: {import.meta.env.VITE_SUPABASE_URL}
+        </p>
+      </div>
+
       {/* Manual test input */}
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4">
         <form onSubmit={handleManualSubmit} className="flex gap-2 max-w-sm mx-auto">
