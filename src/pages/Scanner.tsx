@@ -35,6 +35,7 @@ const Scanner = () => {
     erpSku?: string;
     scannedAt?: string;
     errorMessage?: string;
+    rawData?: any;
   } | null>(null);
 
   const handleScan = useCallback(async (uuid: string) => {
@@ -58,12 +59,15 @@ const Scanner = () => {
         return;
       }
 
+      const isPaid = attendee.payment_status?.toLowerCase() === 'paid';
+
       // Check payment status
-      if (attendee.payment_status !== 'Paid') {
+      if (!isPaid) {
         setResult({
           status: 'not_paid',
           name: attendee.name,
           erpSku: attendee.erp_sku,
+          rawData: attendee,
         });
         return;
       }
@@ -75,6 +79,7 @@ const Scanner = () => {
           name: attendee.name,
           erpSku: attendee.erp_sku,
           scannedAt: attendee.scanned_at,
+          rawData: attendee,
         });
         return;
       }
@@ -95,6 +100,7 @@ const Scanner = () => {
         status: 'granted',
         name: attendee.name,
         erpSku: attendee.erp_sku,
+        rawData: attendee,
       });
     } catch (err: any) {
       setResult({ status: 'error', errorMessage: err.message || 'Unknown error' });
@@ -124,6 +130,7 @@ const Scanner = () => {
         erpSku={result.erpSku}
         scannedAt={result.scannedAt}
         errorMessage={result.errorMessage}
+        rawData={result.rawData}
         onScanNext={handleScanNext}
       />
     );
