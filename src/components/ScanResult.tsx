@@ -75,7 +75,7 @@ const ScanResult = ({ status, name, erpSku, scannedAt, errorMessage, rawData, on
 
         {status === 'not_found' && (
           <p className="text-sm opacity-80">
-            The scanned QR code does not match any ticket in the system.
+            {errorMessage || 'Karta nije pronađena u congressOS bazi.'}
           </p>
         )}
 
