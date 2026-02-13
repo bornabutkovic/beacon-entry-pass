@@ -5,7 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import QrScanner from '@/components/QrScanner';
 import ScanResult, { ScanStatus } from '@/components/ScanResult';
 import { Button } from '@/components/ui/button';
-import { LogOut } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { LogOut, RefreshCw } from 'lucide-react';
 
 // Success sound - short beep
 const playSuccessSound = () => {
@@ -29,6 +30,8 @@ const playSuccessSound = () => {
 const Scanner = () => {
   const { user, loading, signOut } = useAuth();
   const [scanning, setScanning] = useState(true);
+  const [scannerKey, setScannerKey] = useState(0);
+  const [manualId, setManualId] = useState('');
   const [result, setResult] = useState<{
     status: ScanStatus;
     name?: string;
@@ -42,7 +45,6 @@ const Scanner = () => {
     setScanning(false);
 
     try {
-      // Look up attendee
       const { data: attendee, error } = await supabase
         .from('attendees')
         .select('*')
@@ -50,27 +52,16 @@ const Scanner = () => {
         .maybeSingle();
 
       if (error) {
-        setResult({ status: 'error', errorMessage: error.message });
+        setResult({ status: 'error', errorMessage: error.message, rawData: { error } });
         return;
       }
 
       if (!attendee) {
-        setResult({ status: 'not_found' });
+        setResult({ status: 'not_found', rawData: { queried_id: uuid, result: null } });
         return;
       }
 
-      const isPaid = attendee.payment_status?.toLowerCase() === 'paid';
-
-      // Check payment status
-      if (!isPaid) {
-        setResult({
-          status: 'not_paid',
-          name: attendee.name,
-          erpSku: attendee.erp_sku,
-          rawData: attendee,
-        });
-        return;
-      }
+      const isPaid = ['paid', 'approved'].includes(attendee.payment_status?.toLowerCase());
 
       // Check if already scanned
       if (attendee.scanned_at) {
@@ -84,6 +75,16 @@ const Scanner = () => {
         return;
       }
 
+      if (!isPaid) {
+        setResult({
+          status: 'not_paid',
+          name: attendee.name,
+          erpSku: attendee.erp_sku,
+          rawData: attendee,
+        });
+        return;
+      }
+
       // Access granted — update scanned_at
       const { error: updateError } = await supabase
         .from('attendees')
@@ -91,7 +92,7 @@ const Scanner = () => {
         .eq('id', uuid);
 
       if (updateError) {
-        setResult({ status: 'error', errorMessage: updateError.message });
+        setResult({ status: 'error', errorMessage: updateError.message, rawData: { updateError, attendee } });
         return;
       }
 
@@ -103,13 +104,25 @@ const Scanner = () => {
         rawData: attendee,
       });
     } catch (err: any) {
-      setResult({ status: 'error', errorMessage: err.message || 'Unknown error' });
+      setResult({ status: 'error', errorMessage: err.message || 'Unknown error', rawData: { caught: String(err) } });
     }
   }, []);
 
   const handleScanNext = () => {
     setResult(null);
     setScanning(true);
+  };
+
+  const handleResetCamera = () => {
+    setScanning(false);
+    setScannerKey((k) => k + 1);
+    setTimeout(() => setScanning(true), 100);
+  };
+
+  const handleManualSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const id = manualId.trim();
+    if (id) handleScan(id);
   };
 
   if (loading) {
@@ -138,15 +151,39 @@ const Scanner = () => {
 
   return (
     <div className="relative">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={signOut}
-        className="absolute top-4 right-4 z-10 text-muted-foreground hover:text-foreground"
-      >
-        <LogOut className="h-5 w-5" />
-      </Button>
-      <QrScanner onScan={handleScan} active={scanning} />
+      <div className="absolute top-4 right-4 z-10 flex gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleResetCamera}
+          className="text-muted-foreground hover:text-foreground"
+          title="Reset Camera"
+        >
+          <RefreshCw className="h-5 w-5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={signOut}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <LogOut className="h-5 w-5" />
+        </Button>
+      </div>
+      <QrScanner key={scannerKey} onScan={handleScan} active={scanning} />
+
+      {/* Manual test input */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4">
+        <form onSubmit={handleManualSubmit} className="flex gap-2 max-w-sm mx-auto">
+          <Input
+            value={manualId}
+            onChange={(e) => setManualId(e.target.value)}
+            placeholder="Paste attendee UUID to test..."
+            className="text-xs"
+          />
+          <Button type="submit" size="sm">Test</Button>
+        </form>
+      </div>
     </div>
   );
 };

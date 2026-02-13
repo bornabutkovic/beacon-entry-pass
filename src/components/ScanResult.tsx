@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react';
 
 export type ScanStatus = 'granted' | 'not_paid' | 'already_scanned' | 'not_found' | 'error';
 
@@ -17,27 +17,27 @@ const config: Record<ScanStatus, { bg: string; icon: React.ReactNode; title: str
   granted: {
     bg: 'bg-green-500',
     icon: <CheckCircle className="h-24 w-24 text-white" />,
-    title: 'ACCESS GRANTED',
+    title: 'ULAZ ODOBREN',
   },
   not_paid: {
     bg: 'bg-red-500',
     icon: <XCircle className="h-24 w-24 text-white" />,
-    title: 'NOT PAID',
+    title: 'NIJE PLAĆENO',
   },
   already_scanned: {
     bg: 'bg-yellow-500',
     icon: <AlertTriangle className="h-24 w-24 text-white" />,
-    title: 'ALREADY SCANNED',
+    title: 'VEĆ SKENIRANO',
   },
   not_found: {
     bg: 'bg-red-500',
     icon: <XCircle className="h-24 w-24 text-white" />,
-    title: 'TICKET NOT FOUND',
+    title: 'KARTA NIJE PRONAĐENA',
   },
   error: {
     bg: 'bg-red-500',
     icon: <XCircle className="h-24 w-24 text-white" />,
-    title: 'ERROR',
+    title: 'GREŠKA',
   },
 };
 
@@ -88,7 +88,7 @@ const ScanResult = ({ status, name, erpSku, scannedAt, errorMessage, rawData, on
           variant="outline"
           className="mt-6 text-lg px-8 py-6 bg-white/20 border-white text-white hover:bg-white/30 hover:text-white"
         >
-          Scan Next
+          Skeniraj Sljedeći
         </Button>
 
         {/* Debug: Raw JSON from database */}
