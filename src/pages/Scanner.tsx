@@ -34,29 +34,21 @@ const Scanner = () => {
   const [connectionStatus, setConnectionStatus] = useState('Checking...');
   const [result, setResult] = useState<{
     status: ScanStatus;
-    name?: string;
-    erpSku?: string;
-    scannedAt?: string;
+    attendee?: any;
     errorMessage?: string;
-    rawData?: any;
   } | null>(null);
 
-  // Test connection on mount
   useEffect(() => {
     const test = async () => {
       if (!externalSupabase) {
-        setConnectionStatus('❌ Anon Key missing — cannot connect');
+        setConnectionStatus('❌ Key missing');
         return;
       }
       try {
         const { count, error }: any = await externalSupabase
           .from('attendees')
           .select('*', { count: 'exact', head: true });
-        if (error) {
-          setConnectionStatus(`❌ ${error.message}`);
-        } else {
-          setConnectionStatus(`✅ Connected — ${count ?? 0} attendees`);
-        }
+        setConnectionStatus(error ? `❌ ${error.message}` : `✅ ${count ?? 0} attendees`);
       } catch (err: any) {
         setConnectionStatus(`❌ ${err.message}`);
       }
@@ -68,11 +60,7 @@ const Scanner = () => {
     setScanning(false);
 
     if (!externalSupabase) {
-      setResult({
-        status: 'error',
-        errorMessage: 'Supabase Anon Key nije konfiguriran. Kontaktirajte administratora.',
-        rawData: { key_set: false, url: EXTERNAL_PROJECT_URL },
-      });
+      setResult({ status: 'error', errorMessage: 'Supabase nije konfiguriran.' });
       return;
     }
 
@@ -84,65 +72,27 @@ const Scanner = () => {
         .maybeSingle();
 
       if (error) {
-        setResult({
-          status: 'error',
-          errorMessage: `${error.message} | code: ${error.code} | hint: ${error.hint || 'none'}`,
-          rawData: { error },
-        });
+        setResult({ status: 'error', errorMessage: `${error.message} (${error.code})` });
         return;
       }
 
       if (!attendee) {
-        setResult({
-          status: 'not_found',
-          errorMessage: `Karta nije pronađena u congressOS bazi (ID: ${uuid})`,
-          rawData: { queried_id: uuid, project: EXTERNAL_PROJECT_URL, result: null },
-        });
+        setResult({ status: 'not_found', errorMessage: `Karta nije pronađena u congressOS bazi (ID: ${uuid})` });
+        return;
+      }
+
+      // Determine status without updating scanned_at (that happens on confirm)
+      if (attendee.scanned_at) {
+        setResult({ status: 'already_scanned', attendee });
         return;
       }
 
       const isPaid = ['paid', 'approved'].includes(attendee.payment_status?.toLowerCase());
+      setResult({ status: isPaid ? 'found_paid' : 'found_unpaid', attendee });
 
-      if (attendee.scanned_at) {
-        setResult({
-          status: 'already_scanned',
-          name: attendee.name,
-          erpSku: attendee.erp_sku,
-          scannedAt: attendee.scanned_at,
-          rawData: attendee,
-        });
-        return;
-      }
-
-      if (!isPaid) {
-        setResult({
-          status: 'not_paid',
-          name: attendee.name,
-          erpSku: attendee.erp_sku,
-          rawData: attendee,
-        });
-        return;
-      }
-
-      const { error: updateError }: any = await (externalSupabase as any)
-        .from('attendees')
-        .update({ scanned_at: new Date().toISOString() })
-        .eq('id', uuid);
-
-      if (updateError) {
-        setResult({ status: 'error', errorMessage: updateError.message, rawData: { updateError, attendee } });
-        return;
-      }
-
-      playSuccessSound();
-      setResult({
-        status: 'granted',
-        name: attendee.name,
-        erpSku: attendee.erp_sku,
-        rawData: attendee,
-      });
+      if (isPaid) playSuccessSound();
     } catch (err: any) {
-      setResult({ status: 'error', errorMessage: err.message || 'Unknown error', rawData: { caught: String(err) } });
+      setResult({ status: 'error', errorMessage: err.message || 'Unknown error' });
     }
   }, []);
 
@@ -177,11 +127,8 @@ const Scanner = () => {
     return (
       <ScanResult
         status={result.status}
-        name={result.name}
-        erpSku={result.erpSku}
-        scannedAt={result.scannedAt}
+        attendee={result.attendee}
         errorMessage={result.errorMessage}
-        rawData={result.rawData}
         onScanNext={handleScanNext}
       />
     );
@@ -189,9 +136,8 @@ const Scanner = () => {
 
   return (
     <div className="relative">
-      {/* Debug: Connection status */}
       <div className="bg-muted px-3 py-1 text-[11px] font-mono text-muted-foreground z-30 relative">
-        Connected to: {EXTERNAL_PROJECT_URL} | Key: {hasValidKey ? '✅' : '❌'} | {connectionStatus}
+        {EXTERNAL_PROJECT_URL} | {hasValidKey ? '✅' : '❌'} | {connectionStatus}
       </div>
 
       <div className="absolute top-12 right-4 z-10 flex gap-2">
@@ -205,13 +151,12 @@ const Scanner = () => {
 
       <QrScanner key={scannerKey} onScan={handleScan} active={scanning} />
 
-      {/* Manual test input */}
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-3 z-20">
         <form onSubmit={handleManualSubmit} className="flex gap-2 max-w-sm mx-auto">
           <Input
             value={manualId}
             onChange={(e) => setManualId(e.target.value)}
-            placeholder="Paste attendee UUID to test..."
+            placeholder="Paste attendee UUID..."
             className="text-xs"
           />
           <Button type="submit" size="sm">Test</Button>
