@@ -7,11 +7,12 @@ import { Label } from '@/components/ui/label';
 import { ScanLine } from 'lucide-react';
 
 const Login = () => {
-  const { user, loading, signIn } = useAuth();
+  const { user, loading, signIn, signUp } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
 
   if (loading) {
     return (
@@ -27,7 +28,9 @@ const Login = () => {
     e.preventDefault();
     setError('');
     setSubmitting(true);
-    const { error } = await signIn(email, password);
+    const { error } = isSignUp
+      ? await signUp(email, password)
+      : await signIn(email, password);
     if (error) setError(error.message);
     setSubmitting(false);
   };
@@ -40,7 +43,9 @@ const Login = () => {
             <ScanLine className="h-8 w-8 text-primary-foreground" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Ticket Scanner</h1>
-          <p className="text-sm text-muted-foreground">Sign in to start scanning</p>
+          <p className="text-sm text-muted-foreground">
+            {isSignUp ? 'Create a staff account' : 'Sign in to start scanning'}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -65,7 +70,7 @@ const Login = () => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
-              autoComplete="current-password"
+              autoComplete={isSignUp ? 'new-password' : 'current-password'}
             />
           </div>
 
@@ -74,9 +79,22 @@ const Login = () => {
           )}
 
           <Button type="submit" className="w-full" disabled={submitting}>
-            {submitting ? 'Signing in...' : 'Sign In'}
+            {submitting
+              ? (isSignUp ? 'Creating account...' : 'Signing in...')
+              : (isSignUp ? 'Create Account' : 'Sign In')}
           </Button>
         </form>
+
+        <p className="text-center text-sm text-muted-foreground">
+          {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
+          <button
+            type="button"
+            onClick={() => { setIsSignUp(!isSignUp); setError(''); }}
+            className="font-medium text-primary hover:underline"
+          >
+            {isSignUp ? 'Sign In' : 'Sign Up'}
+          </button>
+        </p>
       </div>
     </div>
   );
