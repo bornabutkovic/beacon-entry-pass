@@ -65,30 +65,71 @@ const Scanner = () => {
     }
 
     try {
-      const { data: attendee, error }: any = await externalSupabase
+      // 1. Fetch attendee
+      const { data: attendee, error: attErr }: any = await externalSupabase
         .from('attendees')
         .select('*')
         .eq('id', uuid)
         .maybeSingle();
 
-      if (error) {
-        setResult({ status: 'error', errorMessage: `${error.message} (${error.code})` });
+      if (attErr) {
+        setResult({ status: 'error', errorMessage: `${attErr.message} (${attErr.code})` });
         return;
       }
-
       if (!attendee) {
         setResult({ status: 'not_found', errorMessage: `Karta nije pronađena u congressOS bazi (ID: ${uuid})` });
         return;
       }
 
-      // Determine status without updating scanned_at (that happens on confirm)
+      // 2. Fetch event title
+      let eventTitle = attendee.event_id || '';
+      if (attendee.event_id) {
+        const { data: evt }: any = await externalSupabase
+          .from('events')
+          .select('title')
+          .eq('id', attendee.event_id)
+          .maybeSingle();
+        if (evt?.title) eventTitle = evt.title;
+      }
+
+      // 3. Fetch most recent order
+      const { data: order }: any = await externalSupabase
+        .from('orders')
+        .select('*')
+        .eq('attendee_id', uuid)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // 4. Fetch order items with service names
+      let serviceNames: string[] = [];
+      let orderStatus = order?.status || '';
+      if (order) {
+        const { data: items }: any = await externalSupabase
+          .from('order_items')
+          .select('*, event_services(name)')
+          .eq('order_id', order.id);
+        if (items) {
+          serviceNames = items.map((item: any) => item.event_services?.name || item.service_id).filter(Boolean);
+        }
+      }
+
+      // Build enriched attendee object
+      const enriched = {
+        ...attendee,
+        eventTitle,
+        orderStatus,
+        serviceNames,
+        orderId: order?.id,
+      };
+
       if (attendee.scanned_at) {
-        setResult({ status: 'already_scanned', attendee });
+        setResult({ status: 'already_scanned', attendee: enriched });
         return;
       }
 
-      const isPaid = ['paid', 'approved'].includes(attendee.payment_status?.toLowerCase());
-      setResult({ status: isPaid ? 'found_paid' : 'found_unpaid', attendee });
+      const isPaid = ['paid', 'approved', 'completed'].includes(orderStatus?.toLowerCase());
+      setResult({ status: isPaid ? 'found_paid' : 'found_unpaid', attendee: enriched });
 
       if (isPaid) playSuccessSound();
     } catch (err: any) {
