@@ -13,8 +13,14 @@ const FORCED_URL = 'https://yqusqfdaikkvvjflgmmh.supabase.co';
 const ENV_URL = import.meta.env.VITE_EXTERNAL_SUPABASE_URL;
 const ENV_KEY = import.meta.env.VITE_EXTERNAL_SUPABASE_ANON_KEY;
 
-// Always use the forced URL to guarantee correct connection
-const externalSupabase = createClient(FORCED_URL, ENV_KEY);
+// Lazy-init to avoid crash if key is missing
+let _client: ReturnType<typeof createClient> | null = null;
+const getClient = () => {
+  if (!_client && ENV_KEY) {
+    _client = createClient(FORCED_URL, ENV_KEY);
+  }
+  return _client;
+};
 
 // Success sound - short beep
 const playSuccessSound = () => {
@@ -65,7 +71,17 @@ const Scanner = () => {
       
       // Try querying public.attendees
       try {
-        const { count, error } = await externalSupabase
+        const client = getClient();
+        if (!client) {
+          setDebugInfo({
+            tableCheck: '❌ Cannot connect — Anon Key missing',
+            rowCount: 'N/A',
+            envSync,
+            lastError: 'VITE_EXTERNAL_SUPABASE_ANON_KEY is not set',
+          });
+          return;
+        }
+        const { count, error } = await client
           .from('attendees')
           .select('*', { count: 'exact', head: true });
 
@@ -100,7 +116,12 @@ const Scanner = () => {
     setScanning(false);
 
     try {
-      const { data: attendee, error } = await externalSupabase
+      const client = getClient();
+      if (!client) {
+        setResult({ status: 'error', errorMessage: 'Anon Key not configured — cannot connect to external database', rawData: { ENV_KEY: '(not set)' } });
+        return;
+      }
+      const { data: attendee, error }: any = await client
         .from('attendees')
         .select('*')
         .eq('id', uuid)
@@ -143,7 +164,7 @@ const Scanner = () => {
         return;
       }
 
-      const { error: updateError } = await externalSupabase
+      const { error: updateError }: any = await (client as any)
         .from('attendees')
         .update({ scanned_at: new Date().toISOString() })
         .eq('id', uuid);
