@@ -31,7 +31,7 @@ const config: Record<ScanStatus, { bg: string; icon: React.ReactNode; title: str
   not_found: {
     bg: 'bg-red-500',
     icon: <XCircle className="h-24 w-24 text-white" />,
-    title: 'NOT FOUND',
+    title: 'TICKET NOT FOUND',
   },
   error: {
     bg: 'bg-red-500',
@@ -43,6 +43,9 @@ const config: Record<ScanStatus, { bg: string; icon: React.ReactNode; title: str
 const ScanResult = ({ status, name, erpSku, scannedAt, errorMessage, onScanNext }: ScanResultProps) => {
   const { bg, icon, title } = config[status];
 
+  // Parse erp_sku as comma-separated services
+  const services = erpSku ? erpSku.split(',').map((s) => s.trim()).filter(Boolean) : [];
+
   return (
     <div className={`flex flex-col items-center justify-center min-h-screen ${bg} p-6 text-white`}>
       <div className="flex flex-col items-center gap-6 max-w-sm w-full">
@@ -50,15 +53,29 @@ const ScanResult = ({ status, name, erpSku, scannedAt, errorMessage, onScanNext 
         <h1 className="text-4xl font-black tracking-wider text-center">{title}</h1>
 
         {name && (
+          <p className="text-3xl font-bold text-center">{name}</p>
+        )}
+
+        {services.length > 0 && (
           <div className="text-center space-y-1">
-            <p className="text-2xl font-bold">{name}</p>
-            {erpSku && <p className="text-lg opacity-90">SKU: {erpSku}</p>}
+            <p className="text-sm font-semibold uppercase tracking-wide opacity-80">Services</p>
+            <ul className="space-y-1">
+              {services.map((service, i) => (
+                <li key={i} className="text-lg">{service}</li>
+              ))}
+            </ul>
           </div>
         )}
 
         {status === 'already_scanned' && scannedAt && (
           <p className="text-sm opacity-80">
             Scanned at: {new Date(scannedAt).toLocaleString()}
+          </p>
+        )}
+
+        {status === 'not_found' && (
+          <p className="text-sm opacity-80">
+            The scanned QR code does not match any ticket in the system.
           </p>
         )}
 
