@@ -1,12 +1,20 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { externalSupabase } from '@/integrations/supabase/externalClient';
+import { createClient } from '@supabase/supabase-js';
 import QrScanner from '@/components/QrScanner';
 import ScanResult, { ScanStatus } from '@/components/ScanResult';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LogOut, RefreshCw } from 'lucide-react';
+
+// Force the external Supabase URL
+const FORCED_URL = 'https://yqusqfdaikkvvjflgmmh.supabase.co';
+const ENV_URL = import.meta.env.VITE_EXTERNAL_SUPABASE_URL;
+const ENV_KEY = import.meta.env.VITE_EXTERNAL_SUPABASE_ANON_KEY;
+
+// Always use the forced URL to guarantee correct connection
+const externalSupabase = createClient(FORCED_URL, ENV_KEY);
 
 // Success sound - short beep
 const playSuccessSound = () => {
@@ -32,6 +40,12 @@ const Scanner = () => {
   const [scanning, setScanning] = useState(true);
   const [scannerKey, setScannerKey] = useState(0);
   const [manualId, setManualId] = useState('');
+  const [debugInfo, setDebugInfo] = useState<{
+    tableCheck: string;
+    rowCount: string;
+    envSync: string;
+    lastError: string;
+  }>({ tableCheck: 'Checking...', rowCount: 'Checking...', envSync: 'Checking...', lastError: 'None' });
   const [result, setResult] = useState<{
     status: ScanStatus;
     name?: string;
@@ -40,6 +54,47 @@ const Scanner = () => {
     errorMessage?: string;
     rawData?: any;
   } | null>(null);
+
+  // Run connection diagnostics on mount
+  useEffect(() => {
+    const runDiagnostics = async () => {
+      // Check env sync
+      const envSync = ENV_URL === FORCED_URL
+        ? `✅ Env matches forced URL`
+        : `⚠️ Env URL: ${ENV_URL || '(not set)'} — Using forced: ${FORCED_URL}`;
+      
+      // Try querying public.attendees
+      try {
+        const { count, error } = await externalSupabase
+          .from('attendees')
+          .select('*', { count: 'exact', head: true });
+
+        if (error) {
+          setDebugInfo({
+            tableCheck: `❌ Error querying public.attendees`,
+            rowCount: 'N/A',
+            envSync,
+            lastError: `${error.message} (code: ${error.code}, details: ${error.details}, hint: ${error.hint})`,
+          });
+        } else {
+          setDebugInfo({
+            tableCheck: '✅ public.attendees accessible',
+            rowCount: `${count ?? 0} rows`,
+            envSync,
+            lastError: 'None',
+          });
+        }
+      } catch (err: any) {
+        setDebugInfo({
+          tableCheck: '❌ Connection failed',
+          rowCount: 'N/A',
+          envSync,
+          lastError: err.message || String(err),
+        });
+      }
+    };
+    runDiagnostics();
+  }, []);
 
   const handleScan = useCallback(async (uuid: string) => {
     setScanning(false);
@@ -52,18 +107,21 @@ const Scanner = () => {
         .maybeSingle();
 
       if (error) {
-        setResult({ status: 'error', errorMessage: error.message, rawData: { error } });
+        const fullError = `${error.message} | code: ${error.code} | details: ${error.details} | hint: ${error.hint}`;
+        setDebugInfo(prev => ({ ...prev, lastError: fullError }));
+        setResult({ status: 'error', errorMessage: fullError, rawData: { error } });
         return;
       }
 
       if (!attendee) {
-        setResult({ status: 'not_found', rawData: { queried_id: uuid, result: null } });
+        const msg = `No row found for id="${uuid}" in public.attendees at ${FORCED_URL}`;
+        setDebugInfo(prev => ({ ...prev, lastError: msg }));
+        setResult({ status: 'not_found', errorMessage: msg, rawData: { queried_id: uuid, result: null, project: FORCED_URL } });
         return;
       }
 
       const isPaid = ['paid', 'approved'].includes(attendee.payment_status?.toLowerCase());
 
-      // Check if already scanned
       if (attendee.scanned_at) {
         setResult({
           status: 'already_scanned',
@@ -85,7 +143,6 @@ const Scanner = () => {
         return;
       }
 
-      // Access granted — update scanned_at
       const { error: updateError } = await externalSupabase
         .from('attendees')
         .update({ scanned_at: new Date().toISOString() })
@@ -172,15 +229,8 @@ const Scanner = () => {
       </div>
       <QrScanner key={scannerKey} onScan={handleScan} active={scanning} />
 
-      {/* Debug: Supabase URL */}
-      <div className="fixed bottom-20 left-0 right-0 px-4">
-        <p className="text-[10px] text-muted-foreground text-center break-all">
-          External Supabase URL: {import.meta.env.VITE_EXTERNAL_SUPABASE_URL}
-        </p>
-      </div>
-
       {/* Manual test input */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4">
+      <div className="fixed bottom-[220px] left-0 right-0 bg-background border-t p-3 z-20">
         <form onSubmit={handleManualSubmit} className="flex gap-2 max-w-sm mx-auto">
           <Input
             value={manualId}
@@ -190,6 +240,18 @@ const Scanner = () => {
           />
           <Button type="submit" size="sm">Test</Button>
         </form>
+      </div>
+
+      {/* Connection Debug Info */}
+      <div className="fixed bottom-0 left-0 right-0 bg-black/90 text-green-400 font-mono text-[10px] p-3 z-20 space-y-1 max-h-[200px] overflow-auto">
+        <p className="text-yellow-400 font-bold text-xs mb-1">🔧 Connection Debug Info</p>
+        <p><span className="text-gray-400">Project URL:</span> {FORCED_URL}</p>
+        <p><span className="text-gray-400">Env VITE_EXTERNAL_SUPABASE_URL:</span> {ENV_URL || '(not set)'}</p>
+        <p><span className="text-gray-400">Anon Key:</span> {ENV_KEY ? `${ENV_KEY.substring(0, 20)}...` : '❌ NOT SET'}</p>
+        <p><span className="text-gray-400">Table Check:</span> {debugInfo.tableCheck}</p>
+        <p><span className="text-gray-400">Row Count:</span> {debugInfo.rowCount}</p>
+        <p><span className="text-gray-400">Environment Sync:</span> {debugInfo.envSync}</p>
+        <p><span className="text-gray-400">Last Error:</span> <span className="text-red-400">{debugInfo.lastError}</span></p>
       </div>
     </div>
   );
