@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { externalSupabase } from '@/integrations/supabase/externalClient';
 import QrScanner from '@/components/QrScanner';
 import ScanResult, { ScanStatus } from '@/components/ScanResult';
 import { Button } from '@/components/ui/button';
@@ -45,7 +45,7 @@ const Scanner = () => {
     setScanning(false);
 
     try {
-      const { data: attendee, error } = await supabase
+      const { data: attendee, error } = await externalSupabase
         .from('attendees')
         .select('*')
         .eq('id', uuid)
@@ -86,7 +86,7 @@ const Scanner = () => {
       }
 
       // Access granted — update scanned_at
-      const { error: updateError } = await supabase
+      const { error: updateError } = await externalSupabase
         .from('attendees')
         .update({ scanned_at: new Date().toISOString() })
         .eq('id', uuid);
@@ -175,7 +175,7 @@ const Scanner = () => {
       {/* Debug: Supabase URL */}
       <div className="fixed bottom-20 left-0 right-0 px-4">
         <p className="text-[10px] text-muted-foreground text-center break-all">
-          Supabase URL: {import.meta.env.VITE_SUPABASE_URL}
+          External Supabase URL: {import.meta.env.VITE_EXTERNAL_SUPABASE_URL}
         </p>
       </div>
 
