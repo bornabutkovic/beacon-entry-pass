@@ -58,20 +58,22 @@ const Scanner = () => {
   }, []);
 
   const handleScan = useCallback(async (uuid: string) => {
+    // Immediately stop scanner and show loading to prevent white screen
     setScanning(false);
+    setFetching(true);
 
     // Handle invalid QR code format from scanner
     if (uuid === '__INVALID__') {
+      setFetching(false);
       setResult({ status: 'error', errorMessage: 'Invalid QR Code Format. The scanned code does not contain a valid attendee ID.' });
       return;
     }
 
     if (!externalSupabase) {
+      setFetching(false);
       setResult({ status: 'error', errorMessage: 'Backend is not configured.' });
       return;
     }
-
-    setFetching(true);
 
     try {
       // 1. Fetch attendee
