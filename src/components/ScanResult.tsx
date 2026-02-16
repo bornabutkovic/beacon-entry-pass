@@ -18,7 +18,7 @@ const getDisplayName = (attendee: any): string => {
   if (attendee?.first_name || attendee?.last_name) {
     return [attendee.first_name, attendee.last_name].filter(Boolean).join(' ');
   }
-  return attendee?.name || 'Nepoznato';
+  return attendee?.name || 'Unknown';
 };
 
 const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }: ScanResultProps) => {
@@ -52,7 +52,7 @@ const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }:
         setTimeout(() => onScanNext(), 1500);
       }
     } catch (err: any) {
-      setConfirmError(err.message || 'Greška pri ažuriranju');
+      setConfirmError(err.message || 'Error updating record');
     } finally {
       setConfirming(false);
     }
@@ -67,13 +67,13 @@ const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }:
             <XCircle className="h-10 w-10 text-destructive" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">
-            {status === 'not_found' ? 'KARTA NIJE PRONAĐENA' : 'GREŠKA'}
+            {status === 'not_found' ? 'TICKET NOT FOUND' : 'ERROR'}
           </h1>
           <p className="text-muted-foreground text-sm">
-            {errorMessage || 'Karta nije pronađena u congressOS bazi.'}
+            {errorMessage || 'Ticket not found in the database.'}
           </p>
           <Button onClick={onScanNext} className="w-full h-14 text-lg">
-            Skeniraj Sljedeći
+            Scan Next
           </Button>
         </div>
       </div>
@@ -82,9 +82,9 @@ const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }:
 
   // --- Status Header ---
   const headerConfig = {
-    found_paid: { bg: 'bg-emerald-500', icon: CheckCircle, label: 'ODOBRENO' },
-    found_unpaid: { bg: 'bg-destructive', icon: XCircle, label: 'NA ČEKANJU' },
-    already_scanned: { bg: 'bg-amber-500', icon: AlertTriangle, label: 'VEĆ SKENIRANO' },
+    found_paid: { bg: 'bg-emerald-500', icon: CheckCircle, label: 'APPROVED' },
+    found_unpaid: { bg: 'bg-destructive', icon: XCircle, label: 'PENDING' },
+    already_scanned: { bg: 'bg-amber-500', icon: AlertTriangle, label: 'ALREADY SCANNED' },
   } as const;
 
   const header = headerConfig[status as keyof typeof headerConfig];
@@ -121,10 +121,10 @@ const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }:
           <Card>
             <CardContent className="py-4 space-y-1">
               {eventTitle && (
-                <p className="text-sm text-foreground"><span className="font-semibold text-muted-foreground">Događaj:</span> {eventTitle}</p>
+               <p className="text-sm text-foreground"><span className="font-semibold text-muted-foreground">Event:</span> {eventTitle}</p>
               )}
               {venueName && (
-                <p className="text-sm text-foreground"><span className="font-semibold text-muted-foreground">Lokacija:</span> {venueName}</p>
+               <p className="text-sm text-foreground"><span className="font-semibold text-muted-foreground">Venue:</span> {venueName}</p>
               )}
             </CardContent>
           </Card>
@@ -136,7 +136,7 @@ const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }:
             <CardContent className="py-4 flex items-center gap-3">
               <Clock className="h-5 w-5 text-amber-500 flex-shrink-0" />
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Vrijeme ulaska</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Entry Time</p>
                 <p className="text-sm font-medium text-foreground">
                   {new Date(attendee.scanned_at).toLocaleString('hr-HR', {
                     day: '2-digit', month: '2-digit', year: 'numeric',
@@ -154,7 +154,7 @@ const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }:
             <CardContent className="py-4 space-y-2">
               <div className="flex items-center gap-2 mb-1">
                 <Ticket className="h-4 w-4 text-muted-foreground" />
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kupljene usluge</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Purchased Services</p>
               </div>
               <ul className="space-y-2">
                 {services.map((service: string, i: number) => (
@@ -181,20 +181,20 @@ const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }:
             disabled={confirming}
             className="w-full h-14 text-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
           >
-            {confirming ? 'Potvrđivanje...' : '✓ POTVRDI ULAZ'}
+            {confirming ? 'Confirming...' : '✓ CONFIRM ENTRY'}
           </Button>
         ) : confirmed ? (
           <div className="space-y-3">
             <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-center">
-              <p className="text-emerald-700 font-semibold text-sm">✓ Ulaz uspješno potvrđen</p>
+              <p className="text-emerald-700 font-semibold text-sm">✓ Check-in Successful</p>
             </div>
             <Button onClick={onScanNext} className="w-full h-14 text-lg font-bold">
-              Skeniraj Sljedeći
+              Scan Next
             </Button>
           </div>
         ) : (
           <Button onClick={onScanNext} className="w-full h-14 text-lg font-bold">
-            Skeniraj Sljedeći
+            Scan Next
           </Button>
         )}
       </div>
