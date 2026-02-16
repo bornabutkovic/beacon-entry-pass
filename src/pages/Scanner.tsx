@@ -87,10 +87,11 @@ const Scanner = () => {
       if (attendee.event_id) {
         const { data: evt }: any = await externalSupabase
           .from('events')
-          .select('title, venue_name')
+          .select('name, title, venue_name')
           .eq('id', attendee.event_id)
           .maybeSingle();
-        if (evt?.title) eventTitle = evt.title;
+        if (evt?.name) eventTitle = evt.name;
+        else if (evt?.title) eventTitle = evt.title;
         if (evt?.venue_name) enrichedVenueName = evt.venue_name;
       }
 
