@@ -29,6 +29,7 @@ const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }:
   const displayName = getDisplayName(attendee);
   const email = attendee?.email || '';
   const eventTitle = attendee?.eventTitle || '';
+  const venueName = attendee?.venueName || '';
   const services: string[] = attendee?.serviceNames || [];
   const orderStatus = attendee?.orderStatus || '';
   const isPaid = ['paid', 'approved', 'completed'].includes(orderStatus?.toLowerCase()) || status === 'already_scanned';
@@ -79,7 +80,7 @@ const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }:
 
   // --- Status Header ---
   const headerConfig = {
-    found_paid: { bg: 'bg-emerald-500', icon: CheckCircle, label: 'PLAĆENO' },
+    found_paid: { bg: 'bg-emerald-500', icon: CheckCircle, label: 'ODOBRENO' },
     found_unpaid: { bg: 'bg-destructive', icon: XCircle, label: 'NA ČEKANJU' },
     already_scanned: { bg: 'bg-amber-500', icon: AlertTriangle, label: 'VEĆ SKENIRANO' },
   } as const;
@@ -113,6 +114,20 @@ const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }:
           </CardContent>
         </Card>
 
+        {/* Event & Venue Info */}
+        {(eventTitle || venueName) && (
+          <Card>
+            <CardContent className="py-4 space-y-1">
+              {eventTitle && (
+                <p className="text-sm text-foreground"><span className="font-semibold text-muted-foreground">Događaj:</span> {eventTitle}</p>
+              )}
+              {venueName && (
+                <p className="text-sm text-foreground"><span className="font-semibold text-muted-foreground">Lokacija:</span> {venueName}</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Already scanned time */}
         {status === 'already_scanned' && attendee?.scanned_at && (
           <Card>
@@ -137,7 +152,7 @@ const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }:
             <CardContent className="py-4 space-y-2">
               <div className="flex items-center gap-2 mb-1">
                 <Ticket className="h-4 w-4 text-muted-foreground" />
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Plaćene usluge</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kupljene usluge</p>
               </div>
               <ul className="space-y-2">
                 {services.map((service: string, i: number) => (
