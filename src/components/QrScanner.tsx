@@ -6,16 +6,31 @@ interface QrScannerProps {
   active: boolean;
 }
 
+const UUID_REGEX = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+/**
+ * Extract a UUID from any string: raw UUID, URL containing UUID, or JSON with a UUID field.
+ */
+const extractUuid = (raw: string): string | null => {
+  const trimmed = raw.trim();
+  const match = trimmed.match(UUID_REGEX);
+  return match ? match[0] : null;
+};
+
 const QrScanner = ({ onScan, active }: QrScannerProps) => {
   const scannerRef = useRef<Html5Qrcode | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const processedRef = useRef(false);
 
   useEffect(() => {
-    if (!active) return;
+    if (!active) {
+      processedRef.current = false;
+      return;
+    }
 
     const scannerId = 'qr-reader';
     const scanner = new Html5Qrcode(scannerId);
     scannerRef.current = scanner;
+    processedRef.current = false;
 
     scanner.start(
       { facingMode: 'environment' },
@@ -24,11 +39,18 @@ const QrScanner = ({ onScan, active }: QrScannerProps) => {
         qrbox: { width: 250, height: 250 },
       },
       (decodedText) => {
-        // Validate UUID format
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (uuidRegex.test(decodedText)) {
+        if (processedRef.current) return;
+
+        const uuid = extractUuid(decodedText);
+        if (uuid) {
+          processedRef.current = true;
           scanner.stop().catch(() => {});
-          onScan(decodedText);
+          onScan(uuid);
+        } else {
+          // Non-UUID QR code — trigger error once
+          processedRef.current = true;
+          scanner.stop().catch(() => {});
+          onScan('__INVALID__');
         }
       },
       () => {} // ignore scan failures
@@ -46,7 +68,6 @@ const QrScanner = ({ onScan, active }: QrScannerProps) => {
       <h2 className="text-lg font-semibold text-foreground mb-4">Point camera at QR code</h2>
       <div
         id="qr-reader"
-        ref={containerRef}
         className="w-full max-w-sm rounded-lg overflow-hidden"
       />
     </div>

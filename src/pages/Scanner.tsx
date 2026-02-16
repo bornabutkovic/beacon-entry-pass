@@ -32,6 +32,7 @@ const Scanner = () => {
   const [scannerKey, setScannerKey] = useState(0);
   const [manualId, setManualId] = useState('');
   const [connectionStatus, setConnectionStatus] = useState('Checking...');
+  const [fetching, setFetching] = useState(false);
   const [result, setResult] = useState<{
     status: ScanStatus;
     attendee?: any;
@@ -59,10 +60,18 @@ const Scanner = () => {
   const handleScan = useCallback(async (uuid: string) => {
     setScanning(false);
 
-    if (!externalSupabase) {
-      setResult({ status: 'error', errorMessage: 'Supabase nije konfiguriran.' });
+    // Handle invalid QR code format from scanner
+    if (uuid === '__INVALID__') {
+      setResult({ status: 'error', errorMessage: 'Invalid QR Code Format. The scanned code does not contain a valid attendee ID.' });
       return;
     }
+
+    if (!externalSupabase) {
+      setResult({ status: 'error', errorMessage: 'Backend is not configured.' });
+      return;
+    }
+
+    setFetching(true);
 
     try {
       // 1. Fetch attendee
@@ -77,7 +86,7 @@ const Scanner = () => {
         return;
       }
       if (!attendee) {
-        setResult({ status: 'not_found', errorMessage: `Karta nije pronađena u congressOS bazi (ID: ${uuid})` });
+        setResult({ status: 'not_found', errorMessage: `Ticket not found in the database (ID: ${uuid})` });
         return;
       }
 
@@ -137,6 +146,8 @@ const Scanner = () => {
       if (isPaid) playSuccessSound();
     } catch (err: any) {
       setResult({ status: 'error', errorMessage: err.message || 'Unknown error' });
+    } finally {
+      setFetching(false);
     }
   }, []);
 
@@ -166,6 +177,15 @@ const Scanner = () => {
   }
 
   if (!user) return <Navigate to="/" replace />;
+
+  if (fetching) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background gap-3">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <p className="text-muted-foreground font-medium">Checking Database...</p>
+      </div>
+    );
+  }
 
   if (result) {
     return (
