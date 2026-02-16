@@ -48,6 +48,8 @@ const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }:
       } else {
         setConfirmed(true);
         onConfirmed?.();
+        // Auto-reset to camera after short delay
+        setTimeout(() => onScanNext(), 1500);
       }
     } catch (err: any) {
       setConfirmError(err.message || 'Greška pri ažuriranju');
