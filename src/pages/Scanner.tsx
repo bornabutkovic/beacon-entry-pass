@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { externalSupabase, EXTERNAL_PROJECT_URL, hasValidKey } from '@/integrations/supabase/externalClient';
@@ -26,13 +26,15 @@ const playSuccessSound = () => {
   }
 };
 
+type ViewState = 'scanning' | 'fetching' | 'result';
+
 const Scanner = () => {
   const { user, loading, signOut } = useAuth();
-  const [scanning, setScanning] = useState(true);
+  const [viewState, setViewState] = useState<ViewState>('scanning');
   const [scannerKey, setScannerKey] = useState(0);
   const [manualId, setManualId] = useState('');
   const [connectionStatus, setConnectionStatus] = useState('Checking...');
-  const [fetching, setFetching] = useState(false);
+  const isProcessing = useRef(false);
   const [result, setResult] = useState<{
     status: ScanStatus;
     attendee?: any;
@@ -57,21 +59,32 @@ const Scanner = () => {
     test();
   }, []);
 
-  const handleScan = useCallback(async (uuid: string) => {
-    // Immediately stop scanner and show loading to prevent white screen
-    setScanning(false);
-    setFetching(true);
+  // ─── Unified lookup function used by BOTH manual input and QR scanner ───
+  const handleAttendeeLookup = useCallback(async (id: string) => {
+    console.log('Scanned ID:', id);
 
-    // Handle invalid QR code format from scanner
-    if (uuid === '__INVALID__') {
-      setFetching(false);
+    // Prevent duplicate processing
+    if (isProcessing.current) {
+      console.log('Already processing, skipping:', id);
+      return;
+    }
+    isProcessing.current = true;
+
+    // Immediately show loading UI
+    setViewState('fetching');
+
+    // Handle invalid QR code format
+    if (id === '__INVALID__') {
       setResult({ status: 'error', errorMessage: 'Invalid QR Code Format. The scanned code does not contain a valid attendee ID.' });
+      setViewState('result');
+      isProcessing.current = false;
       return;
     }
 
     if (!externalSupabase) {
-      setFetching(false);
       setResult({ status: 'error', errorMessage: 'Backend is not configured.' });
+      setViewState('result');
+      isProcessing.current = false;
       return;
     }
 
@@ -80,15 +93,17 @@ const Scanner = () => {
       const { data: attendee, error: attErr }: any = await externalSupabase
         .from('attendees')
         .select('*')
-        .eq('id', uuid)
+        .eq('id', id)
         .maybeSingle();
 
       if (attErr) {
         setResult({ status: 'error', errorMessage: `${attErr.message} (${attErr.code})` });
+        setViewState('result');
         return;
       }
       if (!attendee) {
-        setResult({ status: 'not_found', errorMessage: `Ticket not found in the database (ID: ${uuid})` });
+        setResult({ status: 'not_found', errorMessage: `Ticket not found in the database (ID: ${id})` });
+        setViewState('result');
         return;
       }
 
@@ -109,7 +124,7 @@ const Scanner = () => {
       const { data: order }: any = await externalSupabase
         .from('orders')
         .select('*')
-        .eq('attendee_id', uuid)
+        .eq('attendee_id', id)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -127,7 +142,6 @@ const Scanner = () => {
         }
       }
 
-      // Build enriched attendee object
       const enriched = {
         ...attendee,
         eventTitle,
@@ -139,35 +153,41 @@ const Scanner = () => {
 
       if (attendee.scanned_at) {
         setResult({ status: 'already_scanned', attendee: enriched });
+        setViewState('result');
         return;
       }
 
       const isPaid = ['paid', 'approved', 'completed'].includes(orderStatus?.toLowerCase());
       setResult({ status: isPaid ? 'found_paid' : 'found_unpaid', attendee: enriched });
+      setViewState('result');
 
       if (isPaid) playSuccessSound();
     } catch (err: any) {
+      console.error('Lookup error:', err);
       setResult({ status: 'error', errorMessage: err.message || 'Unknown error' });
+      setViewState('result');
     } finally {
-      setFetching(false);
+      isProcessing.current = false;
     }
   }, []);
 
   const handleScanNext = () => {
     setResult(null);
-    setScanning(true);
+    isProcessing.current = false;
+    setScannerKey((k) => k + 1);
+    setViewState('scanning');
   };
 
   const handleResetCamera = () => {
-    setScanning(false);
+    isProcessing.current = false;
     setScannerKey((k) => k + 1);
-    setTimeout(() => setScanning(true), 100);
+    setViewState('scanning');
   };
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const id = manualId.trim();
-    if (id) handleScan(id);
+    if (id) handleAttendeeLookup(id);
   };
 
   if (loading) {
@@ -180,16 +200,18 @@ const Scanner = () => {
 
   if (!user) return <Navigate to="/" replace />;
 
-  if (fetching) {
+  // ─── Fetching state: full-screen spinner ───
+  if (viewState === 'fetching') {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background gap-3">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        <p className="text-muted-foreground font-medium">Checking Database...</p>
+        <p className="text-muted-foreground font-medium">Verifying Ticket...</p>
       </div>
     );
   }
 
-  if (result) {
+  // ─── Result state ───
+  if (viewState === 'result' && result) {
     return (
       <ScanResult
         status={result.status}
@@ -200,6 +222,7 @@ const Scanner = () => {
     );
   }
 
+  // ─── Scanning state (default) ───
   return (
     <div className="relative">
       <div className="bg-muted px-3 py-1 text-[11px] font-mono text-muted-foreground z-30 relative">
@@ -215,7 +238,7 @@ const Scanner = () => {
         </Button>
       </div>
 
-      <QrScanner key={scannerKey} onScan={handleScan} active={scanning} />
+      <QrScanner key={scannerKey} onScan={handleAttendeeLookup} active={viewState === 'scanning'} />
 
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-3 z-20">
         <form onSubmit={handleManualSubmit} className="flex gap-2 max-w-sm mx-auto">
