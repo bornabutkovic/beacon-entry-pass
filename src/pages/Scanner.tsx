@@ -81,15 +81,17 @@ const Scanner = () => {
         return;
       }
 
-      // 2. Fetch event title
+      // 2. Fetch event title & venue
       let eventTitle = attendee.event_id || '';
+      let enrichedVenueName = '';
       if (attendee.event_id) {
         const { data: evt }: any = await externalSupabase
           .from('events')
-          .select('title')
+          .select('title, venue_name')
           .eq('id', attendee.event_id)
           .maybeSingle();
         if (evt?.title) eventTitle = evt.title;
+        if (evt?.venue_name) enrichedVenueName = evt.venue_name;
       }
 
       // 3. Fetch most recent order
@@ -118,6 +120,7 @@ const Scanner = () => {
       const enriched = {
         ...attendee,
         eventTitle,
+        venueName: enrichedVenueName,
         orderStatus,
         serviceNames,
         orderId: order?.id,
