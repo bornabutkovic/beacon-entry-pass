@@ -61,19 +61,19 @@ const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }:
   // --- Not Found / Error ---
   if (status === 'not_found' || status === 'error') {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+      <div className="min-h-screen bg-muted flex flex-col items-center justify-center p-6">
         <div className="max-w-sm w-full text-center space-y-6">
-          <div className="mx-auto w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center">
-            <XCircle className="h-10 w-10 text-destructive" />
+          <div className="mx-auto w-20 h-20 rounded-full bg-muted-foreground/10 flex items-center justify-center">
+            <XCircle className="h-10 w-10 text-muted-foreground" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">
             {status === 'not_found' ? 'TICKET NOT FOUND' : 'ERROR'}
           </h1>
           <p className="text-muted-foreground text-sm">
-            {errorMessage || 'Ticket not found in the database.'}
+            {errorMessage || 'This ticket was not found in the database.'}
           </p>
           <Button onClick={onScanNext} className="w-full h-14 text-lg">
-            Scan Next
+            Back to Scanner
           </Button>
         </div>
       </div>
@@ -83,7 +83,7 @@ const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }:
   // --- Status Header ---
   const headerConfig = {
     found_paid: { bg: 'bg-emerald-500', icon: CheckCircle, label: 'APPROVED' },
-    found_unpaid: { bg: 'bg-destructive', icon: XCircle, label: 'PENDING' },
+    found_unpaid: { bg: 'bg-red-600', icon: XCircle, label: 'INVALID TICKET - UNPAID' },
     already_scanned: { bg: 'bg-amber-500', icon: AlertTriangle, label: 'ALREADY SCANNED' },
   } as const;
 
@@ -175,7 +175,7 @@ const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }:
         <div className="flex-1 min-h-4" />
 
         {/* Action Bar */}
-        {isPaid && !confirmed && status !== 'already_scanned' ? (
+        {status === 'found_paid' && !confirmed ? (
           <Button
             onClick={handleConfirm}
             disabled={confirming}
@@ -194,7 +194,7 @@ const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }:
           </div>
         ) : (
           <Button onClick={onScanNext} className="w-full h-14 text-lg font-bold">
-            Scan Next
+            Back to Scanner
           </Button>
         )}
       </div>
