@@ -151,17 +151,22 @@ const Scanner = () => {
         orderId: order?.id,
       };
 
-      if (attendee.scanned_at) {
-        setResult({ status: 'already_scanned', attendee: enriched });
-        setViewState('result');
-        return;
-      }
+      const isPaid =
+        attendee.payment_status === 'paid' ||
+        order?.status === 'paid' ||
+        order?.status === 'approved' ||
+        order?.status === 'completed';
 
-      const isPaid = ['paid', 'approved', 'completed'].includes(orderStatus?.toLowerCase());
-      setResult({ status: isPaid ? 'found_paid' : 'found_unpaid', attendee: enriched });
+      const status: ScanStatus = attendee.scanned_at
+        ? 'already_scanned'
+        : isPaid
+        ? 'found_paid'
+        : 'found_unpaid';
+
+      setResult({ status, attendee: enriched });
       setViewState('result');
 
-      if (isPaid) playSuccessSound();
+      if (status === 'found_paid') playSuccessSound();
     } catch (err: any) {
       console.error('Lookup error:', err);
       setResult({ status: 'error', errorMessage: err.message || 'Unknown error' });
