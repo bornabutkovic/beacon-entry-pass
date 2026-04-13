@@ -5,6 +5,7 @@ import { EXTERNAL_PROJECT_URL, hasValidKey } from '@/integrations/supabase/exter
 import { lookupTicket } from '@/lib/scanTicket';
 import QrScanner from '@/components/QrScanner';
 import ScanResult, { ScanStatus } from '@/components/ScanResult';
+import ConwayoLogo from '@/components/ConwayoLogo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LogOut, RefreshCw } from 'lucide-react';
@@ -49,7 +50,6 @@ const Scanner = () => {
         return;
       }
       try {
-        // Quick connectivity check via lookup of a dummy ID
         setConnectionStatus('✅ Connected');
       } catch (err: any) {
         setConnectionStatus(`❌ ${err.message}`);
@@ -58,21 +58,17 @@ const Scanner = () => {
     test();
   }, []);
 
-  // ─── Unified lookup function used by BOTH manual input and QR scanner ───
   const handleAttendeeLookup = useCallback(async (id: string) => {
     console.log('Scanned ID:', id);
 
-    // Prevent duplicate processing
     if (isProcessing.current) {
       console.log('Already processing, skipping:', id);
       return;
     }
     isProcessing.current = true;
 
-    // Immediately show loading UI
     setViewState('fetching');
 
-    // Handle invalid QR code format
     if (id === '__INVALID__') {
       setResult({ status: 'error', errorMessage: 'Invalid QR Code Format. The scanned code does not contain a valid attendee ID.' });
       setViewState('result');
@@ -132,17 +128,18 @@ const Scanner = () => {
 
   if (!user) return <Navigate to="/" replace />;
 
-  // ─── Fetching state: full-screen spinner ───
   if (viewState === 'fetching') {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background gap-3">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        <p className="text-muted-foreground font-medium">Verifying Ticket...</p>
+        <div
+          className="h-10 w-10 animate-spin rounded-full border-4 border-t-transparent"
+          style={{ borderColor: 'hsl(263 70% 58%)', borderTopColor: 'transparent' }}
+        />
+        <p className="text-muted-foreground font-medium font-[Poppins]">Verifying Ticket...</p>
       </div>
     );
   }
 
-  // ─── Result state ───
   if (viewState === 'result' && result) {
     return (
       <ScanResult
@@ -154,33 +151,39 @@ const Scanner = () => {
     );
   }
 
-  // ─── Scanning state (default) ───
   return (
-    <div className="relative">
-      <div className="bg-muted px-3 py-1 text-[11px] font-mono text-muted-foreground z-30 relative">
-        {EXTERNAL_PROJECT_URL} | {hasValidKey ? '✅' : '❌'} | {connectionStatus}
-      </div>
-
-      <div className="absolute top-12 right-4 z-10 flex gap-2">
-        <Button variant="ghost" size="icon" onClick={handleResetCamera} className="text-muted-foreground hover:text-foreground" title="Reset Camera">
-          <RefreshCw className="h-5 w-5" />
-        </Button>
-        <Button variant="ghost" size="icon" onClick={signOut} className="text-muted-foreground hover:text-foreground">
-          <LogOut className="h-5 w-5" />
-        </Button>
+    <div className="relative bg-background min-h-screen">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border" style={{ background: 'hsl(222 47% 8%)' }}>
+        <ConwayoLogo size={28} showText={true} subtitle="Scanner" textClass="text-sm" />
+        <div className="flex gap-1">
+          <Button variant="ghost" size="icon" onClick={handleResetCamera} className="text-muted-foreground hover:text-white">
+            <RefreshCw className="h-5 w-5" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={signOut} className="text-muted-foreground hover:text-white">
+            <LogOut className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
 
       <QrScanner key={scannerKey} onScan={handleAttendeeLookup} active={viewState === 'scanning'} />
 
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-3 z-20">
+      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-3 z-20">
         <form onSubmit={handleManualSubmit} className="flex gap-2 max-w-sm mx-auto">
           <Input
             value={manualId}
             onChange={(e) => setManualId(e.target.value)}
             placeholder="Paste attendee UUID..."
-            className="text-xs"
+            className="text-xs bg-input border-border text-white placeholder:text-muted-foreground focus:border-primary"
           />
-          <Button type="submit" size="sm">Test</Button>
+          <Button
+            type="submit"
+            size="sm"
+            className="text-white font-semibold"
+            style={{ background: 'linear-gradient(135deg, hsl(187 94% 43%), hsl(263 70% 58%), hsl(330 81% 60%))' }}
+          >
+            Test
+          </Button>
         </form>
       </div>
     </div>
