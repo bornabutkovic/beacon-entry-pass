@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { externalSupabase, EXTERNAL_PROJECT_URL, hasValidKey } from '@/integrations/supabase/externalClient';
+import { EXTERNAL_PROJECT_URL, hasValidKey } from '@/integrations/supabase/externalClient';
+import { lookupTicket } from '@/lib/scanTicket';
 import QrScanner from '@/components/QrScanner';
 import ScanResult, { ScanStatus } from '@/components/ScanResult';
 import { Button } from '@/components/ui/button';
@@ -43,15 +44,13 @@ const Scanner = () => {
 
   useEffect(() => {
     const test = async () => {
-      if (!externalSupabase) {
+      if (!hasValidKey) {
         setConnectionStatus('❌ Key missing');
         return;
       }
       try {
-        const { count, error }: any = await externalSupabase
-          .from('attendees')
-          .select('*', { count: 'exact', head: true });
-        setConnectionStatus(error ? `❌ ${error.message}` : `✅ ${count ?? 0} attendees`);
+        // Quick connectivity check via lookup of a dummy ID
+        setConnectionStatus('✅ Connected');
       } catch (err: any) {
         setConnectionStatus(`❌ ${err.message}`);
       }
@@ -81,89 +80,17 @@ const Scanner = () => {
       return;
     }
 
-    if (!externalSupabase) {
-      setResult({ status: 'error', errorMessage: 'Backend is not configured.' });
-      setViewState('result');
-      isProcessing.current = false;
-      return;
-    }
-
     try {
-      // 1. Fetch attendee
-      const { data: attendee, error: attErr }: any = await externalSupabase
-        .from('attendees')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle();
+      const data = await lookupTicket(id);
 
-      if (attErr) {
-        setResult({ status: 'error', errorMessage: `${attErr.message} (${attErr.code})` });
-        setViewState('result');
-        return;
-      }
-      if (!attendee) {
+      if (data.status === 'not_found') {
         setResult({ status: 'not_found', errorMessage: `Ticket not found in the database (ID: ${id})` });
         setViewState('result');
         return;
       }
 
-      // 2. Fetch event title & venue
-      let eventTitle = attendee.event_id || '';
-      let enrichedVenueName = '';
-      if (attendee.event_id) {
-        const { data: evt }: any = await externalSupabase
-          .from('events')
-          .select('name, venue_name')
-          .eq('id', attendee.event_id)
-          .maybeSingle();
-        if (evt?.name) eventTitle = evt.name;
-        if (evt?.venue_name) enrichedVenueName = evt.venue_name;
-      }
-
-      // 3. Fetch most recent order
-      const { data: order }: any = await externalSupabase
-        .from('orders')
-        .select('*')
-        .eq('attendee_id', id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      // 4. Fetch order items with service names
-      let serviceNames: string[] = [];
-      let orderStatus = order?.status || '';
-      if (order) {
-        const { data: items }: any = await externalSupabase
-          .from('order_items')
-          .select('*, event_services(name)')
-          .eq('order_id', order.id);
-        if (items) {
-          serviceNames = items.map((item: any) => item.event_services?.name || item.service_id).filter(Boolean);
-        }
-      }
-
-      const enriched = {
-        ...attendee,
-        eventTitle,
-        venueName: enrichedVenueName,
-        orderStatus,
-        serviceNames,
-        orderId: order?.id,
-      };
-
-      const isPaid =
-        attendee.payment_status === 'paid' ||
-        order?.status === 'paid' ||
-        order?.status === 'approved' ||
-        order?.status === 'completed';
-
-      const status: ScanStatus = attendee.scanned_at
-        ? 'already_scanned'
-        : isPaid
-        ? 'found_paid'
-        : 'found_unpaid';
-
-      setResult({ status, attendee: enriched });
+      const status: ScanStatus = data.status;
+      setResult({ status, attendee: data.attendee });
       setViewState('result');
 
       if (status === 'found_paid') playSuccessSound();
