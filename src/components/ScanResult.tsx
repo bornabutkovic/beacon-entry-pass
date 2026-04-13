@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle, XCircle, AlertTriangle, User, Ticket, Clock } from 'lucide-react';
-import { externalSupabase } from '@/integrations/supabase/externalClient';
+import { checkinAttendee } from '@/lib/scanTicket';
 
 export type ScanStatus = 'found_paid' | 'found_unpaid' | 'already_scanned' | 'not_found' | 'error';
 
@@ -35,22 +35,15 @@ const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }:
   const isPaid = ['paid', 'approved', 'completed'].includes(orderStatus?.toLowerCase()) || status === 'already_scanned';
 
   const handleConfirm = async () => {
-    if (!externalSupabase || !attendee?.id) return;
+    if (!attendee?.id) return;
     setConfirming(true);
     setConfirmError('');
     try {
-      const { error }: any = await (externalSupabase as any)
-        .from('attendees')
-        .update({ scanned_at: new Date().toISOString() })
-        .eq('id', attendee.id);
-      if (error) {
-        setConfirmError(error.message);
-      } else {
-        setConfirmed(true);
-        onConfirmed?.();
-        // Auto-reset to camera after short delay
-        setTimeout(() => onScanNext(), 1500);
-      }
+      await checkinAttendee(attendee.id);
+      setConfirmed(true);
+      onConfirmed?.();
+      // Auto-reset to camera after short delay
+      setTimeout(() => onScanNext(), 1500);
     } catch (err: any) {
       setConfirmError(err.message || 'Error updating record');
     } finally {
