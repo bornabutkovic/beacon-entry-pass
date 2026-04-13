@@ -39,8 +39,7 @@ const Login = () => {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center space-y-3 flex flex-col items-center">
-          <ConwayoLogo size={48} showText={false} />
-          <h1 className="text-2xl font-bold tracking-[0.2em] text-white font-[Poppins]">CONWAYO</h1>
+          <img src="/conwayo-logo.png" alt="Conwayo" style={{ height: '48px', objectFit: 'contain' }} />
           <p className="text-sm text-muted-foreground">
             {isSignUp ? 'Create a staff account' : 'Event Check-in'}
           </p>
