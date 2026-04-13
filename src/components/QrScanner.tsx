@@ -22,13 +22,11 @@ const QrScanner = ({ onScan, active }: QrScannerProps) => {
     if (processedRef.current) return;
     processedRef.current = true;
 
-    // Haptic feedback
     try { navigator.vibrate?.(200); } catch {}
 
     const uuid = extractUuid(decodedText);
     console.log('QR decoded raw:', decodedText, '→ uuid:', uuid);
 
-    // Stop scanner immediately to free mobile resources
     if (scannerRef.current) {
       scannerRef.current.stop().catch(() => {});
       scannerRef.current = null;
@@ -48,7 +46,6 @@ const QrScanner = ({ onScan, active }: QrScannerProps) => {
     const scannerId = 'qr-reader';
     processedRef.current = false;
 
-    // Small delay to ensure DOM element is ready
     const timerId = setTimeout(async () => {
       if (!mountedRef.current) return;
 
@@ -71,7 +68,7 @@ const QrScanner = ({ onScan, active }: QrScannerProps) => {
             disableFlip: false,
           },
           (decodedText) => handleDecode(decodedText),
-          () => {} // ignore scan misses
+          () => {}
         );
         console.log('QR scanner started successfully');
       } catch (err) {
@@ -94,11 +91,11 @@ const QrScanner = ({ onScan, active }: QrScannerProps) => {
   }, [active, handleDecode, onScan]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
-      <h2 className="text-lg font-semibold text-foreground mb-4">Point camera at QR code</h2>
+    <div className="flex flex-col items-center justify-center min-h-[70vh] bg-background p-4">
+      <h2 className="text-lg font-semibold text-white mb-4 font-[Poppins]">Point camera at QR code</h2>
       <div
         id="qr-reader"
-        className="w-full max-w-sm rounded-lg overflow-hidden"
+        className="w-full max-w-sm rounded-2xl overflow-hidden border-2 border-primary"
         style={{ minHeight: '300px' }}
       />
       <p className="text-xs text-muted-foreground mt-3">Scanning...</p>

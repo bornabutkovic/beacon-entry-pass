@@ -4,7 +4,7 @@ import { Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ScanLine } from 'lucide-react';
+import ConwayoLogo from '@/components/ConwayoLogo';
 
 const Login = () => {
   const { user, loading, signIn, signUp } = useAuth();
@@ -38,19 +38,17 @@ const Login = () => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm space-y-8">
-        <div className="text-center space-y-2">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary">
-            <ScanLine className="h-8 w-8 text-primary-foreground" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Ticket Scanner</h1>
+        <div className="text-center space-y-3 flex flex-col items-center">
+          <ConwayoLogo size={48} showText={false} />
+          <h1 className="text-2xl font-bold tracking-[0.2em] text-white font-[Poppins]">CONWAYO</h1>
           <p className="text-sm text-muted-foreground">
-            {isSignUp ? 'Create a staff account' : 'Sign in to start scanning'}
+            {isSignUp ? 'Create a staff account' : 'Event Check-in'}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl bg-card border border-border p-6">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="text-muted-foreground text-xs uppercase tracking-wider">Email</Label>
             <Input
               id="email"
               type="email"
@@ -59,10 +57,11 @@ const Login = () => {
               placeholder="staff@example.com"
               required
               autoComplete="email"
+              className="bg-input border-border text-white placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password" className="text-muted-foreground text-xs uppercase tracking-wider">Password</Label>
             <Input
               id="password"
               type="password"
@@ -71,6 +70,7 @@ const Login = () => {
               placeholder="••••••••"
               required
               autoComplete={isSignUp ? 'new-password' : 'current-password'}
+              className="bg-input border-border text-white placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
             />
           </div>
 
@@ -78,7 +78,12 @@ const Login = () => {
             <p className="text-sm text-destructive text-center">{error}</p>
           )}
 
-          <Button type="submit" className="w-full" disabled={submitting}>
+          <Button
+            type="submit"
+            className="w-full font-semibold text-white"
+            disabled={submitting}
+            style={{ background: 'linear-gradient(135deg, hsl(187 94% 43%), hsl(263 70% 58%), hsl(330 81% 60%))' }}
+          >
             {submitting
               ? (isSignUp ? 'Creating account...' : 'Signing in...')
               : (isSignUp ? 'Create Account' : 'Sign In')}
