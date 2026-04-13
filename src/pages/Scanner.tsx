@@ -5,7 +5,7 @@ import { EXTERNAL_PROJECT_URL, hasValidKey } from '@/integrations/supabase/exter
 import { lookupTicket } from '@/lib/scanTicket';
 import QrScanner from '@/components/QrScanner';
 import ScanResult, { ScanStatus } from '@/components/ScanResult';
-import ConwayoLogo from '@/components/ConwayoLogo';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LogOut, RefreshCw } from 'lucide-react';
@@ -155,7 +155,10 @@ const Scanner = () => {
     <div className="relative bg-background min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border" style={{ background: 'hsl(222 47% 8%)' }}>
-        <ConwayoLogo size={28} showText={true} subtitle="Scanner" textClass="text-sm" />
+        <div className="flex items-center gap-2">
+          <img src="/conwayo-logo.png" alt="Conwayo" style={{ height: '36px', objectFit: 'contain' }} />
+          <span className="text-muted-foreground text-sm font-medium">Scanner</span>
+        </div>
         <div className="flex gap-1">
           <Button variant="ghost" size="icon" onClick={handleResetCamera} className="text-muted-foreground hover:text-white">
             <RefreshCw className="h-5 w-5" />
