@@ -5,7 +5,7 @@ import { EXTERNAL_PROJECT_URL, hasValidKey } from '@/integrations/supabase/exter
 import { lookupTicket } from '@/lib/scanTicket';
 import QrScanner from '@/components/QrScanner';
 import ScanResult, { ScanStatus } from '@/components/ScanResult';
-import ConwayoLogo from '@/components/ConwayoLogo';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LogOut, RefreshCw } from 'lucide-react';
