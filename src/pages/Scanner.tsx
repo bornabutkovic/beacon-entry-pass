@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { externalSupabase, EXTERNAL_PROJECT_URL, hasValidKey } from '@/integrations/supabase/externalClient';
+import { EXTERNAL_PROJECT_URL, hasValidKey } from '@/integrations/supabase/externalClient';
+import { lookupTicket } from '@/lib/scanTicket';
 import QrScanner from '@/components/QrScanner';
 import ScanResult, { ScanStatus } from '@/components/ScanResult';
 import { Button } from '@/components/ui/button';
