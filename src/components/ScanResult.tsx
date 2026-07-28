@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle, AlertTriangle, User, Ticket, Clock } from 'lucide-react';
 import { checkinAttendee } from '@/lib/scanTicket';
 
-export type ScanStatus = 'found_paid' | 'found_unpaid' | 'already_scanned' | 'not_found' | 'error';
+export type ScanStatus = 'found_paid' | 'found_unpaid' | 'already_scanned' | 'cancelled' | 'not_found' | 'error';
 
 interface ScanResultProps {
   status: ScanStatus;
@@ -79,6 +79,7 @@ const ScanResult = ({ status, attendee, errorMessage, onScanNext, onConfirmed }:
     found_paid: { bg: 'bg-emerald-500', icon: CheckCircle, label: 'APPROVED' },
     found_unpaid: { bg: 'bg-red-600', icon: XCircle, label: 'INVALID TICKET - UNPAID' },
     already_scanned: { bg: 'bg-amber-500', icon: AlertTriangle, label: 'ALREADY SCANNED' },
+    cancelled: { bg: 'bg-red-900', icon: XCircle, label: 'CANCELLED - ENTRY DENIED' },
   } as const;
 
   const header = headerConfig[status as keyof typeof headerConfig];
