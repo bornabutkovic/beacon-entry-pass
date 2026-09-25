@@ -4,15 +4,16 @@ import { Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
+import { getToken } from '@/lib/scannerApi';
 
 const Login = () => {
-  const { user, loading, signIn, signUp } = useAuth();
+  const { user, loading, signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
+
+  if (getToken()) return <Navigate to="/scan" replace />;
 
   if (loading) {
     return (
@@ -28,9 +29,7 @@ const Login = () => {
     e.preventDefault();
     setError('');
     setSubmitting(true);
-    const { error } = isSignUp
-      ? await signUp(email, password)
-      : await signIn(email, password);
+    const { error } = await signIn(email, password);
     if (error) setError(error.message);
     setSubmitting(false);
   };
@@ -40,9 +39,7 @@ const Login = () => {
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center space-y-3 flex flex-col items-center">
           <img src="/conwayo-logo.png" alt="Conwayo" style={{ height: '48px', objectFit: 'contain' }} />
-          <p className="text-sm text-muted-foreground">
-            {isSignUp ? 'Create a staff account' : 'Event Check-in'}
-          </p>
+          <p className="text-sm text-muted-foreground">Event Check-in</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl bg-card border border-border p-6">
@@ -56,6 +53,7 @@ const Login = () => {
               placeholder="staff@example.com"
               required
               autoComplete="email"
+              style={{ fontSize: '16px' }}
               className="bg-input border-border text-white placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
             />
           </div>
@@ -68,7 +66,8 @@ const Login = () => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
-              autoComplete={isSignUp ? 'new-password' : 'current-password'}
+              autoComplete="current-password"
+              style={{ fontSize: '16px' }}
               className="bg-input border-border text-white placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
             />
           </div>
@@ -83,22 +82,9 @@ const Login = () => {
             disabled={submitting}
             style={{ background: 'linear-gradient(135deg, hsl(187 94% 43%), hsl(263 70% 58%), hsl(330 81% 60%))' }}
           >
-            {submitting
-              ? (isSignUp ? 'Creating account...' : 'Signing in...')
-              : (isSignUp ? 'Create Account' : 'Sign In')}
+            {submitting ? 'Signing in...' : 'Sign In'}
           </Button>
         </form>
-
-        <p className="text-center text-sm text-muted-foreground">
-          {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
-          <button
-            type="button"
-            onClick={() => { setIsSignUp(!isSignUp); setError(''); }}
-            className="font-medium text-primary hover:underline"
-          >
-            {isSignUp ? 'Sign In' : 'Sign Up'}
-          </button>
-        </p>
       </div>
     </div>
   );
