@@ -7,6 +7,8 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Login from "./pages/Login";
 import Scanner from "./pages/Scanner";
 import NotFound from "./pages/NotFound";
+import TokenEntry from "./pages/TokenEntry";
+import EventScanner from "./pages/EventScanner";
 
 const queryClient = new QueryClient();
 
@@ -20,6 +22,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Login />} />
             <Route path="/scanner" element={<Scanner />} />
+            <Route path="/s/:token" element={<TokenEntry />} />
+            <Route path="/scan" element={<EventScanner />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
